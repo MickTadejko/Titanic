@@ -1,1 +1,105 @@
-
+import numpy as np
+import pandas as pd
+df = pd.read_csv("http://analityk.edu.pl/wp-content/uploads/2020/02/titanic.csv")
+df.info()
+df
+# Usunięcie kolumn ze zbyt dużą liczbą pustych wartości
+df = df.drop(['cabin', 'boat', 'body', 'home_dest'], axis='columns', inplace=True)
+df
+# 
+df['title'] = df['name'].str.split(r'[,.]').str[1].str.strip()
+# Sprawdzenie unikalnych wartości tytułu pasażerów
+df['title'].unique()
+#
+df['age'].isnull().sum()/df['pclass'].count()*100
+#
+df['age'].mean(), df['age'].median(), df['age'].mode()
+# Utworzenie histogramu kolumny age
+df.age.hist(bins=30)
+# Obliczenie skośności rozkładu wieku pasażerów
+from scipy.stats import skew
+df.age.skew()
+#
+df[df.age==0]
+#
+df['age_0'] = df['age'].fillna(df_new['age'].mean())
+df['age_0'][df['age'].isnull()]
+#
+from sklearn.impute import SimpleImputer
+imp = SimpleImputer(missing_values=np.nan, strategy='median')
+df['age_1'] = imp.fit_transform(df[['age']])
+df['age_1'][df['age'].isnull()]
+df.info()
+#
+df.groupby('sex')['age'].mean()
+df.groupby('sex')['age'].median()
+#
+df['age_2'] = df['age'].fillna(df.groupby('sex')['age'].transform('mean'))
+df[['sex', 'age_2']][df['age'].isnull()]
+#
+df.groupby(['sex', 'title'])['age'].mean()
+df.groupby(['sex', 'title'])['age'].count()
+#
+df['age_3'] = df['age'].fillna(df.groupby(['sex', 'title'])['age'].transform('mean'))
+df[['sex', 'title', 'age_3']][df['age'].isnull()]
+df.info()
+#
+df['age_3'][df['age'].isnull()].unique()
+df['title'][df['age'].isnull()].unique()
+#
+corr = df.select_dtypes(include='number').corr()
+corr
+#
+import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set()
+plt.figure(figsize=(10, 10))
+sns.heatmap(corr, annot=True, cmap='vlag', vmin=-1, vmax=1)
+#
+from sklearn.preprocessing import LabelEncoder
+le = LabelEncoder()
+df['title_le'] = le.fit_transform(df['title'])
+#
+df['title_le'].unique()
+#
+c = [['Miss', 'Master', 'Mrs', 'Mr', 'Lady', 'Sir']]
+#
+from sklearn.preprocessing import OrdinalEncoder
+oe = OrdinalEncoder(categories=c, handle_unknown='use_encoded_value', unknown_value=6)
+df['title_oe'] = oe.fit_transform(df[['title']])
+#
+df['title_oe'].unique()
+#
+df['title_map'] = df['title'].map(
+    {'Miss':0, 'Mlle': 0, 'Master':1, 'Mrs':2, 'Mme': 2, 'Mr':3, 'Lady':4, 'Sir':5,
+     'Jonkheer': 5, 'Major': 6, 'Col': 7}).fillna(8)
+#
+plt.figure(figsize=(10, 10))
+sns.heatmap(df.corr(numeric_only=True), annot=True, cmap='vlag', vmin=-1, vmax=1)
+df.info()
+#
+df_num = df.select_dtypes(include='number').drop(['survived', 'age_0', 'age_1',
+'age_2', 'age_3', 'title_le', 'title_oe'], axis='columns')
+df_num.info()
+#
+from sklearn.impute import KNNImputer
+imp = KNNImputer(n_neighbors=5, weights="distance")
+df_imp = pd.DataFrame(imp.fit_transform(df_num), columns=df_num.columns)
+df_imp.info()
+#
+df_imp['age'][df['age'].isnull()]
+#
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+imp = IterativeImputer(max_iter=20, tol=0.01, random_state=0)
+df_imp = pd.DataFrame(imp.fit_transform(df_num), columns=df_num.columns)
+df_imp.info()
+#
+df_imp['age'][df['age'].isnull()]
+#
+from sklearn.ensemble import RandomForestRegressor
+imp = IterativeImputer(max_iter=40, tol=0.01, random_state=0, estimator=RandomForestRegressor())
+df_imp = pd.DataFrame(imp.fit_transform(df_num), columns=df_num.columns)
+df_imp.info()
+#
+df_imp['age'][df['age'].isnull()]
